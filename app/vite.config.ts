@@ -13,7 +13,15 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
   },
-
+  optimizeDeps: {
+    // Force Vite to pre-bundle these CJS modules so they get a proper `default` export.
+    // es6-promise-pool is a transitive dep of @excalidraw/excalidraw and is CommonJS-only.
+    include: [
+      'es6-promise-pool',
+      'roughjs',
+      'roughjs/bin/rough',
+    ],
+  },
 })
 
 
