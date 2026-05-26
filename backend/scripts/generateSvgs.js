@@ -77,3 +77,4 @@ for (const icon of ICONS) {
   written++
   console.log(`  ✓ ${icon.id}.svg`)
 }
+console.log(`\n✅  Generated ${written} SVG files → ${ICONS_DIR}\n`)
