@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Icon Server — Admin</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border-bottom: 1px solid #2d3748;
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 700
+    }
+
+    .badge {
+      background: #4c6ef5;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px
+    }
+
+    .hinfo {
+      margin-left: auto;
+      color: #718096;
+      font-size: 11px
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 18px
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      gap: 18px
+    }
+
+    @media(max-width:700px) {
+      .grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .card {
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 20px
+    }
+
+    .card h2 {
+      font-size: 10px;
+      font-weight: 600;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 14px
+    }
+
+    label {
+      font-size: 11px;
+      color: #a0aec0;
+      display: block;
+      margin: 10px 0 3px;
+      font-weight: 500
+    }
+
+    label:first-of-type {
+      margin-top: 0
+    }
+
+    input[type=text],
+    select,
+    textarea {
+      width: 100%;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 7px;
+      color: #e2e8f0;
+      font: 13px monospace;
+      outline: none;
+      padding: 8px 11px;
+      transition: border-color .15s
+    }
+
+    input[type=text]:focus,
+    select:focus,
+    textarea:focus {
+      border-color: #4c6ef5
+    }
+
+    select option {
+      background: #1a1f2e
+    }
+
+    .drop-zone {
+      border: 2px dashed #2d3748;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 8px;
+      padding: 22px;
+      text-align: center;
+      transition: border-color .15s, background .15s
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: #4c6ef5;
+      background: rgba(76, 110, 245, .05)
+    }
+
+    .drop-zone input[type=file] {
+      display: none
+    }
+
+    .drop-zone .dz-icon {
+      font-size: 26px;
+      margin-bottom: 5px
+    }
+
+    .drop-zone p {
+      color: #718096;
+      font-size: 12px
+    }
+
+    .fname {
+      color: #63b3ed;
+      font-size: 12px;
+      margin-top: 3px
+    }
+
+    .preview-wrap {
+      display: none;
+      margin-top: 8px;
+      align-items: center;
+      justify-content: center;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      height: 100px
+    }
+
+    #svgPreview {
+      max-width: 80px;
+      max-height: 80px
+    }
+
+    .btn {
+      background: #4c6ef5;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font: 600 13px system-ui;
+      margin-top: 14px;
+      padding: 10px 20px;
+      transition: background .15s;
+      width: 100%
+    }
+
+    .btn:hover {
+      background: #4263eb
+    }
+
+    .btn:disabled {
+      background: #2d3748;
+      color: #718096;
+      cursor: not-allowed
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #2d3748;
+      margin-bottom: 12px
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #718096;
+      cursor: pointer;
+      font: 600 10px system-ui;
+      padding: 7px 12px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      transition: color .15s, border-color .15s
+    }
+
+    .tab-btn.active {
+      border-bottom-color: #4c6ef5;
+      color: #fff
+    }
+
+    .tab-pane {
+      display: none
+    }
+
+    .tab-pane.active {
+      display: block
+    }
+
+    .curl-box {
+      margin-top: 14px;
+      padding: 11px;
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      color: #63b3ed;
+      font: 11px monospace;
+      line-height: 1.9;
+      white-space: pre-wrap
+    }
+
+    .search-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px
+    }
+
+    .search-row input {
+      flex: 1
+    }
+
+    .search-row select {
+      width: 130px
+    }
+
+    .stats {
+      color: #718096;
+      font-size: 11px;
+      margin-bottom: 8px
+    }
+
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 8px;
+      max-height: 500px;
+      overflow-y: auto
+    }
+
+    .icon-tile {
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      padding: 9px 5px;
+      text-align: center;
+      position: relative;
+      transition: border-color .12s
+    }
+
+    .icon-tile:hover {
+      border-color: #4c6ef5
+    }
+
+    .icon-tile img {
+      width: 54px;
+      height: 54px;
+      object-fit: contain
+    }
+
+    .icon-tile p {
+      color: #a0aec0;
+      font-size: 9px;
+      margin-top: 3px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .del-btn {
+      display: none;
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      background: #e03131;
+      border: none;
+      border-radius: 3px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 9px;
+      padding: 1px 4px
+    }
+
+    .icon-tile:hover .del-btn {
+      display: block
+    }
+
+    .pag {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      gap: 6px
+    }
+
+    .pag-info {
+      color: #718096;
+      font-size: 11px
+    }
+
+    .pag-btns {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap
+    }
+
+    .pag-btn {
+      background: #0f1117;
+      border: 1px solid #2d3748;
+      border-radius: 5px;
+      color: #a0aec0;
+      cursor: pointer;
+      font-size: 11px;
+      padding: 4px 9px;
+      transition: background .12s, border-color .12s
+    }
+
+    .pag-btn:hover:not([disabled]) {
+      border-color: #4c6ef5;
+      color: #fff
+    }
+
+    .pag-btn.cur {
+      background: #4c6ef5;
+      border-color: #4c6ef5;
+      color: #fff
+    }
+
+    .pag-btn[disabled] {
+      opacity: .35;
+      cursor: not-allowed
+    }
+
+    .msg {
+      color: #718096;
+      font-size: 12px;
+      grid-column: 1/-1;
+      padding: 24px;
+      text-align: center
+    }
+
+    #toast {
+      display: none;
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, .4);
+      color: #e2e8f0;
+      font-size: 12px;
+      max-width: 280px;
+      padding: 11px 15px;
+      z-index: 999
+    }
+
+    #toast.show {
+      display: block
+    }
+
+    #toast.ok {
+      border-color: #2f9e44
+    }
+
+    #toast.err {
+      border-color: #e03131
+    }
+
+    textarea {
+      font-size: 11px;
+      height: 110px;
+      resize: vertical
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <span>🎨</span>
+    <h1>Icon Server</h1><span class="badge">Admin</span>
+    <span class="hinfo">
+      <%= total %> icons &middot; <%= storage %>
+    </span>
+  </header>
+
+  <div class="container">
+    <div class="grid">
+
+      <!-- Upload panel -->
+      <div>
+        <div class="card">
+          <h2>Upload Icon</h2>
+          <div class="tabs">
+            <button class="tab-btn active" id="tabFile">File Upload</button>
+            <button class="tab-btn" id="tabJson">JSON / Script</button>
+          </div>
+          <div class="tab-pane active" id="paneFile">
+            <label>Name *</label>
+            <input type="text" id="iName" placeholder="e.g. Apache Kafka" />
+            <label>Category *</label>
+            <select id="iCategory">
+              <% categories.filter(c=>c!=='All').forEach(c=>{ %>
+                <option value="<%= c %>">
+                  <%= c %>
+                </option>
+                <% }) %>
+            </select>
+            <label>New category (overrides above)</label>
+            <input type="text" id="iNewCat" placeholder="e.g. Databases" />
+            <label>Tags (comma-separated)</label>
+            <input type="text" id="iTags" placeholder="kafka, queue" />
+            <label>SVG File *</label>
+            <div class="drop-zone" id="dropZone">
+              <input type="file" id="fileInput" accept=".svg,image/svg+xml" />
+              <div class="dz-icon">📂</div>
+              <p>Drag & drop an SVG, or click to browse</p>
+              <p class="fname" id="fileName"></p>
+            </div>
+            <div class="preview-wrap" id="previewWrap"><img id="svgPreview" alt="preview" /></div>
+            <button class="btn" id="uploadBtn" disabled>Upload Icon</button>
+          </div>
+          <div class="tab-pane" id="paneJson">
+            <label>JSON payload</label>
+            <textarea id="jsonPayload"
+              placeholder='{"id":"x","name":"X","category":"Custom","tags":["x"],"svg":"<svg>...</svg>"}'></textarea>
+            <button class="btn" id="uploadJsonBtn">Upload via JSON</button>
+            <div class="curl-box">curl -X POST http://localhost:3001/api/icons/upload \
+              -F "file=@icon.svg" \
+              -F "name=My Icon" \
+              -F "category=Custom" \
+              -F "tags=custom,icon"</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Icon library -->
+      <div>
+        <div class="card">
+          <h2>Icon Library</h2>
+          <div class="search-row">
+            <input type="text" id="search" placeholder="Search icons…" />
+            <select id="filterCat">
+              <% categories.forEach(c=>{ %>
+                <option value="<%= c %>" <%=c===category ? 'selected' : '' %>><%= c %>
+                </option>
+                <% }) %>
+            </select>
+          </div>
+          <p class="stats" id="stats">
+            <%= total %> icons &middot; page <%= page %>/<%= pages %>
+          </p>
+
+          <div class="icon-grid" id="iconGrid">
+            <% if(icons.length===0){ %>
+              <p class="msg">No icons found</p>
+              <% } else { icons.forEach(function(ic){ %>
+                <div class="icon-tile">
+                  <button class="del-btn" data-id="<%= ic.id %>">✕</button>
+                  <img src="/api/icons/<%= ic.id %>/svg" alt="<%= ic.name %>" loading="lazy"
+                    onerror="this.style.opacity='.2'" />
+                  <p title="<%= ic.name %>">
+                    <%= ic.name %>
+                  </p>
+                </div>
+                <% }) } %>
+          </div>
+
+          <div class="pag">
+            <span class="pag-info" id="pagInfo">
+              <%= Math.min((page-1)*pageSize+1, total) %>–<%= Math.min(page*pageSize, total) %> of <%= total %>
+            </span>
+            <div class="pag-btns" id="pagBtns">
+              <button class="pag-btn" data-pg="<%= page-1 %>" <%=page<=1 ? 'disabled' : '' %>>‹</button>
+              <% for(var i=1; i<=pages; i++){ %>
+                <button class="pag-btn <%= i===page ? 'cur' : '' %>" data-pg="<%= i %>">
+                  <%= i %>
+                </button>
+                <% } %>
+                  <button class="pag-btn" data-pg="<%= page+1 %>" <%=page>=pages ? 'disabled' : '' %>>›</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div id="toast"></div>
+
+  <!-- External JS — avoids Helmet CSP blocking inline scripts -->
+  <script src="/static/admin.js"></script>
+</body>
+
+</html>
