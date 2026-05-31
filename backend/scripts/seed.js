@@ -68,13 +68,13 @@ async function main() {
 
   if (!DRY_RUN) {
     const { connectDB }    = require('../src/config/db')
-    const { ensureBucket } = require('../src/services/s3Service')
+    const { ensureBucket } = require('../src/modules/icons/icon.service')
     await connectDB()
     await ensureBucket()
   }
 
-  const s3    = DRY_RUN ? null : require('../src/services/s3Service')
-  const Icon  = DRY_RUN ? null : require('../src/models/Icon')
+  const s3    = DRY_RUN ? null : require('../src/modules/icons/icon.service')
+  const Icon  = DRY_RUN ? null : require('../src/modules/icons/icon.model')
   const cfg   = require('../src/config/env')
 
   let created = 0, skipped = 0, errors = 0

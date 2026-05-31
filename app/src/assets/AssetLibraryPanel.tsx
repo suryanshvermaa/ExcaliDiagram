@@ -25,7 +25,7 @@ interface PagedResult {
   perPage: number
 }
 
-interface Props { onInsertAsset: (asset: BuiltinAsset) => void }
+interface Props { onInsertAsset: (asset: BuiltinAsset & { svgUrl?: string }) => void }
 
 type Mode = 'server' | 'local'
 
@@ -75,15 +75,13 @@ export function AssetLibraryPanel({ onInsertAsset }: Props) {
         setCategories(cats)
         loadLocal('All', '', 1)
       })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Reload when mode/category/page changes ───────────────────────────────────
   useEffect(() => {
     if (mode !== 'server') return
     loadServer(category, query, page)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, category, page])
+  }, [mode, category, query, page])
 
   // ── Data loading ─────────────────────────────────────────────────────────────
   function loadServer(cat: string, q: string, pg: number) {
@@ -122,8 +120,6 @@ export function AssetLibraryPanel({ onInsertAsset }: Props) {
   const handleCategory = useCallback((cat: string) => {
     setCategory(cat); setPage(1)
     if (mode === 'local') loadLocal(cat, query, 1)
-    else loadServer(cat, query, 1)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, query])
 
   const handleSearch = useCallback((q: string) => {
@@ -132,38 +128,19 @@ export function AssetLibraryPanel({ onInsertAsset }: Props) {
     searchTimer.current = window.setTimeout(() => {
       setPage(1)
       if (mode === 'local') loadLocal(category, q, 1)
-      else loadServer(category, q, 1)
     }, 300)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, category])
 
   const handlePage = useCallback((pg: number) => {
     setPage(pg)
     if (mode === 'local') loadLocal(category, query, pg)
-    else loadServer(category, query, pg)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, category, query])
 
-  // ── Insert handler — fetch SVG text for server icons ─────────────────────────
-  const handleInsert = useCallback(async (asset: BuiltinAsset & { svgUrl?: string }) => {
-    if (asset.svgUrl && !asset.svg) {
-      try {
-        // Fetch via the /api/icons/:id/svg proxy to avoid CORS issues with signed URLs
-        const proxyUrl = `${ICON_SERVER}/api/icons/${asset.id}/svg`
-        const svg = await fetchSvgText(proxyUrl)
-        onInsertAsset({ ...asset, svg })
-      } catch {
-        // Fallback: try direct signed URL
-        try {
-          const svg = await fetchSvgText(asset.svgUrl)
-          onInsertAsset({ ...asset, svg })
-        } catch {
-          console.error('Failed to fetch SVG for', asset.id)
-        }
-      }
-    } else {
-      onInsertAsset(asset)
-    }
+  // ── Insert handler ─────────────────────────────────────────────────────────
+  // For server icons, insert using the same svgUrl the sidebar previews.
+  // This avoids visual mismatches between preview and canvas rendering.
+  const handleInsert = useCallback((asset: BuiltinAsset & { svgUrl?: string }) => {
+    onInsertAsset(asset)
   }, [onInsertAsset])
 
   const start = (page - 1) * PAGE_SIZE + 1
@@ -264,10 +241,45 @@ export function AssetLibraryPanel({ onInsertAsset }: Props) {
         <div className="assetPagination">
           <span className="assetPagInfo">{start}–{end} of {total}</span>
           <div className="assetPagBtns">
+            {/* Prev */}
             <button className="assetPagBtn" disabled={page <= 1} onClick={() => handlePage(page - 1)} aria-label="Previous">‹</button>
-            {Array.from({ length: pages }, (_, i) => i + 1).map(pg => (
-              <button key={pg} className={`assetPagBtn ${pg === page ? 'active' : ''}`} onClick={() => handlePage(pg)}>{pg}</button>
-            ))}
+
+            {/* Windowed page numbers */}
+            {(() => {
+              const buttons: React.ReactNode[] = []
+              const delta = 2
+              const left  = Math.max(2, page - delta)
+              const right = Math.min(pages - 1, page + delta)
+
+              // Always show page 1
+              buttons.push(
+                <button key={1} className={`assetPagBtn ${1 === page ? 'active' : ''}`} onClick={() => handlePage(1)}>1</button>
+              )
+
+              // Left ellipsis
+              if (left > 2) buttons.push(<span key="ellL" className="assetPagEllipsis">…</span>)
+
+              // Middle window
+              for (let p = left; p <= right; p++) {
+                buttons.push(
+                  <button key={p} className={`assetPagBtn ${p === page ? 'active' : ''}`} onClick={() => handlePage(p)}>{p}</button>
+                )
+              }
+
+              // Right ellipsis
+              if (right < pages - 1) buttons.push(<span key="ellR" className="assetPagEllipsis">…</span>)
+
+              // Always show last page
+              if (pages > 1) {
+                buttons.push(
+                  <button key={pages} className={`assetPagBtn ${pages === page ? 'active' : ''}`} onClick={() => handlePage(pages)}>{pages}</button>
+                )
+              }
+
+              return buttons
+            })()}
+
+            {/* Next */}
             <button className="assetPagBtn" disabled={page >= pages} onClick={() => handlePage(page + 1)} aria-label="Next">›</button>
           </div>
         </div>

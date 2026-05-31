@@ -1,6 +1,6 @@
 // ── Excalidraw Renderer — pure native shapes, text bound via label property ───
 import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
-import type { ArchSpec, LayoutNode } from '../types/ai.types'
+import type { ArchSpec } from '../types/ai.types'
 import type { NodeType } from '../types/ai.types'
 import { layoutArchSpec } from './layoutEngine'
 
@@ -38,10 +38,9 @@ function boundaryColor(type: string) {
 
 export async function archSpecToExcalidrawElements(
   spec: ArchSpec,
-  _existing: Record<string, unknown> = {}
 ): Promise<{ elements: ReturnType<typeof convertToExcalidrawElements>; files: Record<string, never> }> {
   const layout = layoutArchSpec(spec)
-  const raw: any[] = []
+  const raw: Array<Record<string, unknown>> = []
 
   // 1. Boundary dashed rectangles
   for (const b of spec.boundaries ?? []) {
@@ -102,5 +101,5 @@ export async function archSpecToExcalidrawElements(
     })
   }
 
-  return { elements: convertToExcalidrawElements(raw), files: {} }
+  return { elements: convertToExcalidrawElements(raw as unknown as Parameters<typeof convertToExcalidrawElements>[0]), files: {} }
 }

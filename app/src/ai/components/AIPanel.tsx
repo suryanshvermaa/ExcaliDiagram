@@ -7,19 +7,19 @@ import { AISettingsModal } from './AISettingsModal'
 
 interface Props {
   /** Called when AI generates/modifies architecture — renders on Excalidraw canvas */
-  onRenderArch:       (elements: any[], files: Record<string, any>, sessionId: string) => void
+  onRenderArch:       (elements: unknown[], files: Record<string, unknown>, sessionId: string) => void
   /** Returns current canvas context (for modify/explain). Now returns unknown — hook tracks Mermaid internally */
   getCurrentArchSpec: () => unknown
 }
 
-export function AIPanel({ onRenderArch, getCurrentArchSpec }: Props) {
+export function AIPanel({ onRenderArch }: Props) {
   const {
     sessions, activeSession, activeId,
     settings, isLoading, streamingMsgId,
     searchQuery, setSearchQuery,
     setSettings, newChat, switchSession,
     removeSession, rename, sendMessage, cancelStream,
-  } = useAISession(onRenderArch, getCurrentArchSpec)
+  } = useAISession(onRenderArch)
 
   const [showSettings,   setShowSettings]   = useState(false)
   const [showHistory,    setShowHistory]     = useState(false)

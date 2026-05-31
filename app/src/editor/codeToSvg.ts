@@ -1,7 +1,19 @@
 // Converts source code into a VS Code–style SVG image element.
 
 export type CodeTheme = 'dark' | 'light'
-export type CodeLang = 'javascript' | 'html' | 'css' | 'cpp' | 'java' | 'text'
+export type CodeLang =
+  | 'javascript'
+  | 'typescript'
+  | 'python'
+  | 'bash'
+  | 'json'
+  | 'rust'
+  | 'go'
+  | 'html'
+  | 'css'
+  | 'cpp'
+  | 'java'
+  | 'text'
 
 const THEMES = {
   dark:  { bg: '#1e1e1e', titleBg: '#2d2d2d', border: '#3e3e42', text: '#d4d4d4', lineNum: '#5a5a5a', kw: '#569cd6', str: '#ce9178', cmt: '#6a9955', num: '#b5cea8', fn: '#dcdcaa', ty: '#4ec9b0', op: '#d4d4d4', builtin: '#9cdcfe', dot: '#d4d4d4' },
@@ -149,7 +161,20 @@ export function codeToSvg(code: string, opts: { lang: CodeLang; theme: CodeTheme
   }).join('\n')
 
   const lang = opts.lang === 'cpp' ? 'C++' : opts.lang.charAt(0).toUpperCase() + opts.lang.slice(1)
-  const extMap: Record<string, string> = { javascript: 'js', html: 'html', css: 'css', cpp: 'cpp', java: 'java', text: 'txt' }
+  const extMap: Record<string, string> = {
+    javascript: 'js',
+    typescript: 'ts',
+    python: 'py',
+    bash: 'sh',
+    json: 'json',
+    rust: 'rs',
+    go: 'go',
+    html: 'html',
+    css: 'css',
+    cpp: 'cpp',
+    java: 'java',
+    text: 'txt',
+  }
   const filename = opts.filename || `snippet.${extMap[opts.lang] ?? opts.lang}`
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">

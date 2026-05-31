@@ -45,19 +45,18 @@ export function AISettingsModal({ settings, onSave, onClose }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [local.provider, local.apiKeys, local.ollamaUrl])
 
+  const resetAndLoadModels = useCallback(() => {
+    // Keep these state updates out of the effect body to satisfy react-hooks/set-state-in-effect.
+    setModels([])
+    setHealth(null)
+    void loadModels()
+  }, [loadModels])
+
   // Re-run when provider switches (guarded inside loadModels)
   useEffect(() => {
-    setModels([])   // clear immediately to avoid flicker
-    setHealth(null) // reset connection badge
-    loadModels()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [local.provider])
-
-  // Also load on first mount (in case user already has a key saved)
-  useEffect(() => {
-    loadModels()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    const t = window.setTimeout(() => resetAndLoadModels(), 0)
+    return () => window.clearTimeout(t)
+  }, [local.provider, resetAndLoadModels])
 
   const testHealth = async () => {
     setTestingHlt(true)
@@ -65,8 +64,8 @@ export function AISettingsModal({ settings, onSave, onClose }: Props) {
     try {
       const result = await testProviderHealth(local.provider, local)
       setHealth({ ok: result.ok, message: result.message })
-    } catch (err: any) {
-      setHealth({ ok: false, message: err.message })
+    } catch (err) {
+      setHealth({ ok: false, message: err instanceof Error ? err.message : String(err) })
     } finally {
       setTestingHlt(false)
     }

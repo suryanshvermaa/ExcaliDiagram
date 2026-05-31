@@ -3,7 +3,7 @@
 // Handles: session CRUD, message sending, streaming, arch generation.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { AISession, AIMessage, AISettings, ProviderID } from '../types/ai.types'
+import type { AISession, AIMessage, AISettings } from '../types/ai.types'
 import {
   loadSessions, upsertSession, deleteSession, renameSession,
   createSession, getActiveSessionId, setActiveSessionId,
@@ -93,11 +93,11 @@ async function mermaidToElements(mermaidCode: string) {
   // Convert skeleton → full ExcalidrawElements, regenerating all IDs so
   // consecutive generations never clash.
   const elements = convertToExcalidrawElements(
-    skelElements as any,
-    { regenerateIds: true } as any,
+    skelElements as Parameters<typeof convertToExcalidrawElements>[0],
+    { regenerateIds: true } as Parameters<typeof convertToExcalidrawElements>[1],
   )
 
-  return { elements, files: (files ?? {}) as any }
+  return { elements, files: (files ?? {}) as Record<string, unknown> }
 }
 
 function autoTitle(content: string): string {
@@ -123,9 +123,7 @@ function detectIntent(content: string, hasMermaid: boolean): Intent {
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 export function useAISession(
-  onRenderArch?: (elements: any[], files: Record<string, any>, sessionId: string) => void,
-  // getCurrentArchSpec is kept for backward-compat but we now track raw Mermaid
-  _getCurrentArchSpec?: () => unknown,
+  onRenderArch?: (elements: unknown[], files: Record<string, unknown>, sessionId: string) => void,
 ) {
   const [sessions, setSessions] = useState<AISession[]>(() => loadSessions())
   const [activeId, setActiveId] = useState<string | null>(() => getActiveSessionId())
@@ -236,7 +234,7 @@ export function useAISession(
           isStreaming: false,
         }, sessId)
 
-        onRenderArch?.(elements as any, files, activeId)
+        onRenderArch?.(elements as unknown[], files, sessId)
 
       } else if (intent === 'modify' && hasMermaid) {
         // ── Architecture modification (Mermaid-in, Mermaid-out) ───────────────
@@ -262,7 +260,7 @@ export function useAISession(
           isStreaming: false,
         }, sessId)
 
-        onRenderArch?.(elements as any, files, activeId)
+        onRenderArch?.(elements as unknown[], files, sessId)
 
       } else if (intent === 'explain' || intent === 'improve') {
         // ── Explain / improve (text response, no diagram change) ──────────────
@@ -322,10 +320,10 @@ export function useAISession(
         )
         cancelStreamRef.current = cancel
       }
-    } catch (err: any) {
+    } catch (err) {
       const errMsg: AIMessage = {
         id: newId(), role: 'assistant',
-        content:   `❌ **Error:** ${err.message}`,
+        content:   `❌ **Error:** ${err instanceof Error ? err.message : String(err)}`,
         timestamp: new Date().toISOString(),
         type:      'error',
       }

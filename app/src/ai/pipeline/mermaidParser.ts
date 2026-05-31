@@ -4,6 +4,8 @@
 
 import { convertToExcalidrawElements } from '@excalidraw/excalidraw'
 
+type ConvertInput = Exclude<Parameters<typeof convertToExcalidrawElements>[0], null>
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface MNode { id: string; label: string; shape: 'box'|'round'|'db'; color: string; subgraph?: string }
 interface MEdge { from: string; to: string; label?: string; dashed: boolean }
@@ -147,7 +149,7 @@ export function mermaidToSkeletonElements(code: string) {
   if (nodes.length === 0) return []
 
   const { positioned } = layoutNodes(nodes, edges)
-  const raw: any[] = []
+  const raw: unknown[] = []
 
   // 1. Subgraph boundaries
   subgraphs.forEach((sg, i) => {
@@ -219,5 +221,5 @@ export function mermaidToSkeletonElements(code: string) {
     })
   })
 
-  return convertToExcalidrawElements(raw)
+  return convertToExcalidrawElements(raw as ConvertInput)
 }

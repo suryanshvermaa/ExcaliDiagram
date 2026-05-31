@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { AISession } from '../types/ai.types'
 
 interface Props {
@@ -18,6 +18,13 @@ export function SessionList({
 }: Props) {
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameVal,  setRenameVal]  = useState('')
+  const [nowMs, setNowMs] = useState(() => Date.now())
+
+  // Update relative timestamps occasionally without calling Date.now() during render.
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000)
+    return () => window.clearInterval(id)
+  }, [])
 
   function startRename(s: AISession) {
     setRenamingId(s.id)
@@ -29,8 +36,8 @@ export function SessionList({
     setRenamingId(null)
   }
 
-  function relativeTime(iso: string) {
-    const diff = Date.now() - new Date(iso).getTime()
+  function relativeTime(iso: string, now: number) {
+    const diff = now - new Date(iso).getTime()
     const mins = Math.floor(diff / 60000)
     if (mins < 1)   return 'just now'
     if (mins < 60)  return `${mins}m ago`
@@ -91,7 +98,7 @@ export function SessionList({
               ) : (
                 <span className="aiSessionTitle">{s.title}</span>
               )}
-              <span className="aiSessionTime">{relativeTime(s.updatedAt)}</span>
+              <span className="aiSessionTime">{relativeTime(s.updatedAt, nowMs)}</span>
             </div>
 
             <div className="aiSessionActions" onClick={e => e.stopPropagation()}>

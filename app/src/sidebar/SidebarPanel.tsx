@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useState } from 'react'
 import { AssetLibraryPanel } from '../assets/AssetLibraryPanel'
 import type { BuiltinAsset } from '../assets/assetCatalog'
 import { CodeBlockModal } from '../editor/CodeBlockModal'
@@ -7,9 +7,9 @@ import { AIPanel } from '../ai/components/AIPanel'
 type Tab = 'assets' | 'code' | 'ai'
 
 interface Props {
-  onInsertAsset:      (asset: BuiltinAsset) => void
+  onInsertAsset:      (asset: BuiltinAsset & { svgUrl?: string }) => void
   onInsertSvg:        (dataUrl: string, w: number, h: number) => void
-  onRenderArch:       (elements: any[], files: Record<string, any>, sessionId: string) => void
+  onRenderArch:       (elements: unknown[], files: Record<string, unknown>, sessionId: string) => void
   getCurrentArchSpec: () => unknown
 }
 
