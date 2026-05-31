@@ -1,5 +1,6 @@
 # ExcaliDiagram
 
+
 Built on top of the Excalidraw canvas library, ExcaliDiagram is a full-stack diagramming app with a custom icon server, resizable sidebar, drag-and-drop asset library, code block modal, and database schema builder. The backend is a Node.js Express server that manages an S3-compatible object store (MinIO for development, AWS S3 for production) to serve SVG icons through a REST API. The frontend is a React app that integrates with Excalidraw to provide an infinite canvas workspace, a sidebar for browsing and inserting icons, and a Monaco Editor–powered modal for rendering syntax-highlighted code snippets as SVG cards on the canvas. LocalStorage autosave ensures your work persists across sessions.
 
 ---
@@ -37,6 +38,15 @@ ExcelidrawApp wraps the open-source [Excalidraw](https://excalidraw.com/) canvas
 ---
 
 ## Features
+
+### Icons Library
+<img src="./assets/IconsHomepage.png" alt="Icons Homepage" width="800"/>
+
+### Code Block Modal
+<img src="./assets/code.png" alt="Code Block Modal" width="800"/>
+
+### AI Assistant
+<img src="./assets/aiAssistant.png" alt="AI Assistant" width="800"/>
 
 ### Frontend (React App)
 
