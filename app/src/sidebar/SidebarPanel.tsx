@@ -1,16 +1,20 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { AssetLibraryPanel } from '../assets/AssetLibraryPanel'
 import type { BuiltinAsset } from '../assets/assetCatalog'
 import { CodeBlockModal } from '../editor/CodeBlockModal'
+import { AIPanel } from '../ai/components/AIPanel'
+import type { ArchSpec } from '../ai/types/ai.types'
 
-type Tab = 'assets' | 'code'
+type Tab = 'assets' | 'code' | 'ai'
 
 interface Props {
-  onInsertAsset: (asset: BuiltinAsset) => void
-  onInsertSvg:  (dataUrl: string, w: number, h: number) => void
+  onInsertAsset:      (asset: BuiltinAsset) => void
+  onInsertSvg:        (dataUrl: string, w: number, h: number) => void
+  onRenderArch:       (elements: any[], files: Record<string, any>) => void
+  getCurrentArchSpec: () => ArchSpec | null
 }
 
-export function SidebarPanel({ onInsertAsset, onInsertSvg }: Props) {
+export function SidebarPanel({ onInsertAsset, onInsertSvg, onRenderArch, getCurrentArchSpec }: Props) {
   const [tab, setTab]            = useState<Tab>('assets')
   const [codeModalOpen, setCode] = useState(false)
 
@@ -31,6 +35,12 @@ export function SidebarPanel({ onInsertAsset, onInsertSvg }: Props) {
             onClick={() => setTab('code')}
           >
             &lt;/&gt; Code
+          </button>
+          <button
+            className={`sidebarTab ai ${tab === 'ai' ? 'active' : ''}`}
+            onClick={() => setTab('ai')}
+          >
+            🤖 AI
           </button>
         </div>
 
@@ -58,6 +68,13 @@ export function SidebarPanel({ onInsertAsset, onInsertSvg }: Props) {
                 <li>✓ Renders as crisp SVG on canvas</li>
               </ul>
             </div>
+          )}
+
+          {tab === 'ai' && (
+            <AIPanel
+              onRenderArch={onRenderArch}
+              getCurrentArchSpec={getCurrentArchSpec}
+            />
           )}
 
         </div>

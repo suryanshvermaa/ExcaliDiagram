@@ -9,6 +9,10 @@ module.exports = {
     uri: process.env.MONGO_URI || 'mongodb://localhost:27017/icons-db',
   },
 
+  ai: {
+    ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
+  },
+
   storage: {
     useS3:          process.env.USE_S3 === 'true',
     bucket:         process.env.S3_BUCKET || 'icons',

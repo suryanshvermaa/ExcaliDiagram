@@ -14,7 +14,11 @@ app.set('views', path.join(__dirname, 'views'))
 
 // ── Security ─────────────────────────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }))
-app.use(cors({ origin: '*' }))
+app.use(cors({
+  origin:         '*',
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-ai-api-key'],
+  exposedHeaders: ['x-ai-api-key'],
+}))
 
 // ── Logging ───────────────────────────────────────────────────────────────────
 app.use(logger)
