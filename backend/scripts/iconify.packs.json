@@ -1,0 +1,24 @@
+{
+  "packs": [
+    {
+      "prefix": "gcp",
+      "category": "Cloud",
+      "limit": 214
+    },
+    {
+      "prefix": "mdi",
+      "category": "Material Design",
+      "limit": 1000
+    },
+    {
+      "prefix": "vscode-icons",
+      "category": "IDE",
+      "limit": 400
+    },
+    {
+      "prefix": "fa6-brands",
+      "category": "Brands",
+      "limit": 300
+    }
+  ]
+}
