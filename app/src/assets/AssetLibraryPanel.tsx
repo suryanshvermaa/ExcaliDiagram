@@ -226,14 +226,14 @@ export function AssetLibraryPanel({ onInsertAsset }: Props) {
                   // Use <img> for ghost when we have a URL
                   const img = document.createElement('img')
                   img.src = asset.svgUrl
-                  img.style.cssText = 'width:64px;height:64px;'
+                  img.style.cssText = 'width:96px;height:96px;'
                   ghost.appendChild(img)
                 } else {
                   ghost.innerHTML = asset.svg
                 }
-                ghost.style.cssText = 'position:fixed;top:-200px;left:-200px;width:64px;height:64px;pointer-events:none;'
+                ghost.style.cssText = 'position:fixed;top:-200px;left:-200px;width:96px;height:96px;pointer-events:none;'
                 document.body.appendChild(ghost)
-                e.dataTransfer.setDragImage(ghost, 32, 32)
+                e.dataTransfer.setDragImage(ghost, 48, 48)
                 setTimeout(() => ghost.remove(), 0)
               }}
               onDragEnd={() => dragState.set(null)}
