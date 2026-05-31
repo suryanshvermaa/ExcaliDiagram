@@ -97,30 +97,31 @@
   width: 100%;    /* fills the drawer — drawer width is controlled by inline style */
 }
 .sidebarTabBar {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
   display: flex;
   flex-shrink: 0;
-  padding: 2px 4px 0;
+  padding: 0 4px;
 }
 .sidebarTab {
   align-items: center;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: rgba(255,255,255,.42);
+  color: #868e96;
   cursor: pointer;
   display: flex;
   flex: 1;
-  font: 600 10px system-ui, sans-serif;
-  gap: 4px;
+  font: 600 11px system-ui, sans-serif;
+  gap: 6px;
   justify-content: center;
   letter-spacing: .5px;
-  padding: 10px 4px;
+  padding: 12px 4px;
   text-transform: uppercase;
   transition: color .15s, border-color .15s;
 }
-.sidebarTab:hover { color: rgba(255,255,255,.75); }
-.sidebarTab.active { border-bottom-color: #4c6ef5; color: #fff; }
+.sidebarTab:hover { color: #495057; }
+.sidebarTab.active { border-bottom-color: #4c6ef5; color: #364fc7; }
 .sidebarContent { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 
 /* ── Code tab ───────────────────────────────────────────────────────────────── */

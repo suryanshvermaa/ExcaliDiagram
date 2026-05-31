@@ -232,24 +232,28 @@ export function ExcalidrawHost() {
   return (
     <div className="editorHost">
       {/* Sidebar drawer */}
-      {sidebarOpen && (
-        <div className="sidebarDrawer" style={{ width: sidebarWidth }}>
-          <SidebarPanel
-            onInsertAsset={handleInsertAsset}
-            onInsertSvg={handleInsertSvgDataUrl}
-          />
-          {/* Resize handle */}
-          <div className="resizeHandle" onMouseDown={onResizeHandleDown} />
-        </div>
-      )}
+      <div 
+        className={`sidebarDrawer ${sidebarOpen ? 'open' : ''}`} 
+        style={{ 
+          width: sidebarOpen ? sidebarWidth : 0,
+          transition: isResizing.current ? 'none' : 'width 0.3s cubic-bezier(.4, 0, .2, 1)'
+        }}
+      >
+        <SidebarPanel
+          onInsertAsset={handleInsertAsset}
+          onInsertSvg={handleInsertSvgDataUrl}
+        />
+        {/* Resize handle */}
+        <div className="sidebarResizeHandle" onMouseDown={onResizeHandleDown} />
+      </div>
 
       {/* Toggle button */}
       <button
-        className="sidebarToggle"
+        className="sidebarToggleBtn"
         onClick={() => setSidebarOpen((o) => !o)}
         title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
       >
-        {sidebarOpen ? "‹" : "›"}
+        <span style={{ fontSize: 16, fontWeight: 500 }}>{sidebarOpen ? "‹" : "›"}</span>
       </button>
 
       {/* Canvas area */}
