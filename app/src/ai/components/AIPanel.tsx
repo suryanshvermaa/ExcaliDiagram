@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ArchSpec } from '../types/ai.types'
 import { useAISession } from '../hooks/useAISession'
 import { ChatMessage }    from './ChatMessage'
 import { ChatInput }      from './ChatInput'
@@ -9,8 +8,8 @@ import { AISettingsModal } from './AISettingsModal'
 interface Props {
   /** Called when AI generates/modifies architecture — renders on Excalidraw canvas */
   onRenderArch:       (elements: any[], files: Record<string, any>) => void
-  /** Returns current ArchSpec from canvas (for modify/explain context) */
-  getCurrentArchSpec: () => ArchSpec | null
+  /** Returns current canvas context (for modify/explain). Now returns unknown — hook tracks Mermaid internally */
+  getCurrentArchSpec: () => unknown
 }
 
 export function AIPanel({ onRenderArch, getCurrentArchSpec }: Props) {

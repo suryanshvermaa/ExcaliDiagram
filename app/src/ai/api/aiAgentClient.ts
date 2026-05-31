@@ -1,7 +1,7 @@
 // ── Frontend API client for the AI Agent backend ──────────────────────────────
 // Handles all calls to /api/ai-agent/* and SSE streaming for chat.
 
-import type { ArchSpec, ProviderID, AIMessage, AISettings } from '../types/ai.types'
+import type { ProviderID, AIMessage, AISettings } from '../types/ai.types'
 
 const AI_API = 'http://localhost:3001/api/ai-agent'
 
@@ -15,7 +15,7 @@ export async function generateArchitecture(
   prompt: string,
   settings: AISettings,
   canvasContext?: string,
-): Promise<{ title: string; description: string; elements: any[] }> {
+): Promise<string> {   // returns raw Mermaid code
   const res = await fetch(`${AI_API}/generate`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders(settings) },
@@ -32,25 +32,24 @@ export async function generateArchitecture(
     throw new Error(err.error || `Generation failed (${res.status})`)
   }
   const data = await res.json()
-  // Returns { title, description, elements[] } — Excalidraw skeleton JSON
-  return { title: data.title ?? 'Diagram', description: data.description ?? '', elements: data.elements ?? [] }
+  return data.mermaid as string
 }
 
 // ── Architecture modification ─────────────────────────────────────────────────
 export async function modifyArchitecture(
   prompt: string,
-  existingSpec: ArchSpec,
+  existingMermaid: string,  // current Mermaid code on the canvas
   settings: AISettings,
-): Promise<ArchSpec> {
+): Promise<string> {   // returns updated Mermaid code
   const res = await fetch(`${AI_API}/modify`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders(settings) },
     body:    JSON.stringify({
-      provider:      settings.provider,
-      model:         settings.model,
+      provider:       settings.provider,
+      model:          settings.model,
       prompt,
-      existingSpec,
-      ollamaBaseUrl: settings.ollamaUrl,
+      existingMermaid,
+      ollamaBaseUrl:  settings.ollamaUrl,
     }),
   })
   if (!res.ok) {
@@ -58,13 +57,13 @@ export async function modifyArchitecture(
     throw new Error(err.error || `Modification failed (${res.status})`)
   }
   const data = await res.json()
-  return data.archSpec as ArchSpec
+  return data.mermaid as string
 }
 
-// ── Architecture explanation ──────────────────────────────────────────────────
+// ── Architecture explanation ─────────────────────────────────────────────────
 export async function explainArchitecture(
   question: string,
-  archSpec: ArchSpec | null,
+  mermaidContext: string | null,  // raw Mermaid code on the canvas (or null)
   settings: AISettings,
 ): Promise<string> {
   const res = await fetch(`${AI_API}/explain`, {
@@ -74,7 +73,7 @@ export async function explainArchitecture(
       provider:      settings.provider,
       model:         settings.model,
       question,
-      archSpec,
+      archSpec:      mermaidContext,  // backend field reused for context string
       ollamaBaseUrl: settings.ollamaUrl,
     }),
   })
@@ -86,9 +85,9 @@ export async function explainArchitecture(
   return data.answer as string
 }
 
-// ── Architecture improvement ──────────────────────────────────────────────────
+// ── Architecture improvement ─────────────────────────────────────────────────
 export async function improveArchitecture(
-  archSpec: ArchSpec,
+  mermaidContext: string | null,  // raw Mermaid code on the canvas (or null)
   focus: string,
   settings: AISettings,
 ): Promise<string> {
@@ -98,7 +97,7 @@ export async function improveArchitecture(
     body:    JSON.stringify({
       provider:      settings.provider,
       model:         settings.model,
-      archSpec,
+      archSpec:      mermaidContext,  // backend field reused for context string
       focus,
       ollamaBaseUrl: settings.ollamaUrl,
     }),

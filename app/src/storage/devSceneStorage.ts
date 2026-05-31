@@ -11,7 +11,8 @@ const STORAGE_KEY = 'excelidrawApp:devScene'
 
 let saveTimer: number | null = null
 
-export async function loadDevScene(): Promise<DevScene | null> {
+// Synchronous load — safe to call during React render/state init
+export function loadDevScene(): DevScene | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
@@ -31,7 +32,7 @@ export function scheduleSaveDevScene(
     window.clearTimeout(saveTimer)
   }
 
-  const debounceMs = options.debounceMs ?? 5000
+  const debounceMs = options.debounceMs ?? 1500  // 1.5 s — fast enough to catch refreshes
 
   saveTimer = window.setTimeout(() => {
     saveTimer = null

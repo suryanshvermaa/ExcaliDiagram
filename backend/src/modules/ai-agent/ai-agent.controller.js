@@ -28,9 +28,9 @@ async function generateArchitecture(req, res) {
       ? `${prompt}\n\nNote: The current canvas already contains: ${canvasContext}`
       : prompt
 
-    // Returns { title, description, elements[] } — Excalidraw skeleton JSON
-    const diagram = await runArchAgent(model, { userPrompt: enrichedPrompt })
-    res.json({ ok: true, title: diagram.title, description: diagram.description, elements: diagram.elements })
+    // Returns raw Mermaid code — frontend converts via @excalidraw/mermaid-to-excalidraw
+    const mermaid = await runArchAgent(model, { userPrompt: enrichedPrompt })
+    res.json({ ok: true, mermaid })
   } catch (err) {
     console.error('[ai-agent] generate error:', err.message)
     res.status(500).json({ error: err.message })
@@ -40,19 +40,20 @@ async function generateArchitecture(req, res) {
 // ── POST /api/ai-agent/modify ─────────────────────────────────────────────────
 async function modifyArchitecture(req, res) {
   try {
-    const { provider = 'openai', prompt, existingSpec } = req.body
-    if (!prompt)       return res.status(400).json({ error: '"prompt" is required' })
-    if (!existingSpec) return res.status(400).json({ error: '"existingSpec" is required' })
+    const { provider = 'openai', prompt, existingMermaid } = req.body
+    if (!prompt)         return res.status(400).json({ error: '"prompt" is required' })
+    if (!existingMermaid) return res.status(400).json({ error: '"existingMermaid" is required' })
 
     const opts  = getOpts(req)
     const model = await buildModel(provider, opts)
 
-    const archSpec = await runArchAgent(model, {
-      userPrompt:   prompt,
-      existingSpec,
-      mode:         'modify',
+    // Returns raw Mermaid code — frontend converts via parseMermaidToExcalidraw
+    const mermaid = await runArchAgent(model, {
+      userPrompt:      prompt,
+      existingMermaid, // pass current diagram as context
+      mode:            'modify',
     })
-    res.json({ ok: true, archSpec })
+    res.json({ ok: true, mermaid })
   } catch (err) {
     console.error('[ai-agent] modify error:', err.message)
     res.status(500).json({ error: err.message })

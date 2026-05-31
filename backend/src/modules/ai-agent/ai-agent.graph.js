@@ -1,56 +1,66 @@
 'use strict'
 
-// ── AI Agent — LangGraph: generate → validate → refine ────────────────────────
-// The AI now outputs Excalidraw skeleton JSON directly (not ArchSpec).
-// Validation checks that the output has a valid "elements" array.
-
+// ── AI Agent — generates/modifies Mermaid code, validates, refines if needed ──
 const { StateGraph, Annotation, END } = require('@langchain/langgraph')
 const { HumanMessage, SystemMessage }  = require('@langchain/core/messages')
 const { GENERATE_SYSTEM_PROMPT }       = require('./prompts/generate.prompt')
+const { MODIFY_SYSTEM_PROMPT }         = require('./prompts/modify.prompt')
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function extractJson(raw) {
-  // Strip markdown code fences if present
-  const stripped = raw
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```\s*$/, '')
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function cleanMermaid(raw) {
+  return raw
+    .replace(/^```(?:mermaid)?\s*/im, '')
+    .replace(/\s*```\s*$/m, '')
     .trim()
-  try {
-    return JSON.parse(stripped)
-  } catch {
-    // Try extracting the first {...} block
-    const match = stripped.match(/\{[\s\S]*\}/)
-    if (match) return JSON.parse(match[0])
-    throw new Error('Response is not valid JSON')
-  }
 }
 
-function validateDiagram(parsed) {
+function validateMermaid(code) {
   const errors = []
-  if (!parsed || typeof parsed !== 'object') errors.push('Root must be a JSON object')
-  if (!Array.isArray(parsed?.elements))        errors.push('"elements" array is missing')
-  if ((parsed?.elements?.length ?? 0) === 0)   errors.push('"elements" array is empty')
+  if (!code || code.trim().length < 10)
+    errors.push('Output is empty or too short')
+  if (!/^flowchart\s|^graph\s/im.test(code))
+    errors.push('Must start with: flowchart LR  or  flowchart TD')
+  if (/^style\s+\w+/im.test(code))
+    errors.push('FORBIDDEN: inline style (style nodeId fill:...) — use classDef instead')
+  if (/^linkStyle\s+/im.test(code))
+    errors.push('FORBIDDEN: linkStyle — remove it entirely')
+  if (/^click\s+/im.test(code))
+    errors.push('FORBIDDEN: click events — remove them entirely')
+  if (/^\s*subgraph\s+/im.test(code))
+    errors.push('FORBIDDEN: subgraph blocks create Excalidraw frames that break direct editability — remove all subgraph...end blocks and use classDef for grouping instead')
   return { valid: errors.length === 0, errors }
 }
 
+
+
 // ── Graph State ────────────────────────────────────────────────────────────────
 const GraphState = Annotation.Root({
-  userPrompt:  Annotation({ reducer: (_, v) => v }),
-  rawResponse: Annotation({ reducer: (_, v) => v, default: () => '' }),
-  retries:     Annotation({ reducer: (_, v) => v, default: () => 0 }),
-  diagram:     Annotation({ reducer: (_, v) => v, default: () => null }),
-  errors:      Annotation({ reducer: (_, v) => v, default: () => [] }),
-  success:     Annotation({ reducer: (_, v) => v, default: () => false }),
-  error:       Annotation({ reducer: (_, v) => v, default: () => null }),
+  userPrompt:    Annotation({ reducer: (_, v) => v }),
+  existingMermaid: Annotation({ reducer: (_, v) => v, default: () => '' }),
+  mode:          Annotation({ reducer: (_, v) => v, default: () => 'generate' }),
+  rawResponse:   Annotation({ reducer: (_, v) => v, default: () => '' }),
+  mermaid:       Annotation({ reducer: (_, v) => v, default: () => '' }),
+  retries:       Annotation({ reducer: (_, v) => v, default: () => 0 }),
+  errors:        Annotation({ reducer: (_, v) => v, default: () => [] }),
+  success:       Annotation({ reducer: (_, v) => v, default: () => false }),
+  error:         Annotation({ reducer: (_, v) => v, default: () => null }),
 })
 
-// ── Node: generate ────────────────────────────────────────────────────────────
+// ── Nodes ──────────────────────────────────────────────────────────────────────
 function makeGenerateNode(model) {
   return async (state) => {
     try {
+      const isModify = state.mode === 'modify' && state.existingMermaid
+
+      const systemPrompt = isModify ? MODIFY_SYSTEM_PROMPT : GENERATE_SYSTEM_PROMPT
+
+      const humanContent = isModify
+        ? `EXISTING FLOWCHART:\n${state.existingMermaid}\n\nINSTRUCTION: ${state.userPrompt}`
+        : state.userPrompt
+
       const response = await model.invoke([
-        new SystemMessage(GENERATE_SYSTEM_PROMPT),
-        new HumanMessage(state.userPrompt),
+        new SystemMessage(systemPrompt),
+        new HumanMessage(humanContent),
       ])
       const content = typeof response.content === 'string'
         ? response.content
@@ -62,22 +72,16 @@ function makeGenerateNode(model) {
   }
 }
 
-// ── Node: validate ────────────────────────────────────────────────────────────
 async function validateNode(state) {
   if (state.error) return { success: false }
-  try {
-    const parsed = extractJson(state.rawResponse)
-    const { valid, errors } = validateDiagram(parsed)
-    return { diagram: parsed, errors, success: valid }
-  } catch (err) {
-    return { diagram: null, errors: [`Parse error: ${err.message}`], success: false }
-  }
+  const code = cleanMermaid(state.rawResponse)
+  const { valid, errors } = validateMermaid(code)
+  return { mermaid: code, errors, success: valid }
 }
 
-// ── Node: refine ──────────────────────────────────────────────────────────────
 function makeRefineNode(model) {
   return async (state) => {
-    const fixPrompt = `Your previous response had issues:\n${state.errors.join('\n')}\n\nPrevious response:\n${state.rawResponse}\n\nFix these issues and return ONLY valid JSON with an "elements" array. No markdown.`
+    const fixPrompt = `Your previous Mermaid output had issues:\n${state.errors.join('\n')}\n\nPrevious output:\n${state.rawResponse}\n\nFix ONLY these issues. Remember the strict rules:\n- Start with: flowchart TD  or  flowchart LR\n- Use ONLY rectangle nodes: A[Label]  (no circles, no diamonds, no stadiums)\n- Use ONLY solid arrows: A --> B  (no -.->, no ==>, no ---)\n- Use classDef + class for colors — NEVER use inline style statements\n- NO markdown fences, NO explanation\n\nOutput ONLY the corrected Mermaid code.`
     try {
       const response = await model.invoke([
         new SystemMessage(GENERATE_SYSTEM_PROMPT),
@@ -99,7 +103,7 @@ function shouldRetry(state) {
   return 'refine'
 }
 
-// ── Build & run ───────────────────────────────────────────────────────────────
+// ── Build & run ────────────────────────────────────────────────────────────────
 function buildGraph(model) {
   return new StateGraph(GraphState)
     .addNode('generate', makeGenerateNode(model))
@@ -112,13 +116,13 @@ function buildGraph(model) {
     .compile()
 }
 
-async function runArchAgent(model, { userPrompt }) {
+async function runArchAgent(model, { userPrompt, existingMermaid = '', mode = 'generate' }) {
   const graph  = buildGraph(model)
-  const result = await graph.invoke({ userPrompt })
-  if (!result.success || !result.diagram) {
-    throw new Error(result.error || `Failed after ${result.retries} attempts: ${result.errors.join(', ')}`)
+  const result = await graph.invoke({ userPrompt, existingMermaid, mode })
+  if (!result.success || !result.mermaid) {
+    throw new Error(result.error || `Failed after ${result.retries} retries: ${result.errors.join(', ')}`)
   }
-  return result.diagram   // { title, description, elements[] }
+  return result.mermaid   // raw Mermaid code string
 }
 
 module.exports = { runArchAgent }

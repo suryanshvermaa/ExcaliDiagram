@@ -1,7 +1,6 @@
 import React, {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -16,7 +15,7 @@ import {
   loadDevScene,
   scheduleSaveDevScene,
 } from "../storage/devSceneStorage";
-import type { ArchSpec } from "../ai/types/ai.types";
+
 
 const ICON_SERVER     = "http://localhost:3001";
 const SIDEBAR_DEFAULT = 340;   // slightly wider to accommodate AI panel
@@ -31,19 +30,16 @@ export function ExcalidrawHost() {
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
   const [lastSavedAt,  setLastSavedAt]  = useState<Date | null>(null);
 
+  // Load saved scene once — passed as initialData prop (correct Excalidraw pattern)
+  const [initialData] = useState(() => {
+    const saved = loadDevScene()
+    if (!saved) return null
+    return { elements: saved.elements as any[], appState: saved.appState as any, files: saved.files as any }
+  })
+
   const isResizing = useRef(false);
   const startX     = useRef(0);
   const startW     = useRef(SIDEBAR_DEFAULT);
-
-  // ── Restore saved scene on mount ──────────────────────────────────────────
-  useLayoutEffect(() => {
-    const saved = loadDevScene();
-    if (!saved || !apiRef.current) return;
-    apiRef.current.updateScene({
-      elements: saved.elements,
-      appState: saved.appState,
-    });
-  }, []);
 
   // ── Autosave on every scene change ────────────────────────────────────────
   const onChange = useCallback(
@@ -192,36 +188,47 @@ export function ExcalidrawHost() {
     []
   );
 
-  // ── AI: render arch spec onto canvas (MERGE, not replace) ──────────────────
+  // ── AI: render Mermaid-converted elements onto canvas ────────────────────
   const handleRenderArch = useCallback(
     (newElements: any[], files: Record<string, { id: string; dataURL: string; mimeType: string; created: number; lastRetrieved: number }>) => {
       const api = apiRef.current;
       if (!api) return;
 
-      // Add any SVG files first
+      // Add any binary files (images) that come with the diagram
       const fileEntries = Object.values(files)
-      if (fileEntries.length > 0) api.addFiles(fileEntries)
+      if (fileEntries.length > 0) api.addFiles(fileEntries as any[])
 
-      // MERGE with existing elements — preserves everything already on canvas
-      const existing = api.getSceneElements() as any[]
-      const merged   = [...existing, ...newElements]
+      // Stamp every element as AI-generated and ensure nothing is locked.
+      // We keep frames intact — in Excalidraw you can click directly on any
+      // element inside a frame to select/move it individually.
+      const stamped = (newElements as any[]).map((el: any) => ({
+        ...el,
+        locked:        false,
+        __aiGenerated: true,
+      }))
 
-      api.updateScene(
-        { elements: merged },
-        { captureUpdate: CaptureUpdateAction.IMMEDIATELY }
-      );
+      // Keep any elements the user drew by hand; replace all previous AI elements.
+      const kept = (api.getSceneElements() as any[])
+        .filter((el: any) => !el.__aiGenerated)
+        .map((el: any) => ({ ...el }))
 
-      // Zoom to show the newly added elements
+      api.updateScene({
+        elements:      [...kept, ...stamped],
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      })
+
+      // Scroll to make the new diagram fully visible
       setTimeout(() => {
-        try { api.scrollToContent(newElements, { fitToViewport: false, animate: true }) } catch { /* ignore */ }
-      }, 150)
+        try {
+          api.scrollToContent(stamped, { fitToViewport: true, animate: true })
+        } catch { /* ignore */ }
+      }, 80)
     },
     []
   );
 
-  // ── AI: extract current ArchSpec from canvas ──────────────────────────────
-  const getCurrentArchSpec = useCallback((): ArchSpec | null => {
-    // We store the last generated spec in a ref on the window for simplicity
+  // getCurrentArchSpec kept for API compatibility — hook now tracks Mermaid internally
+  const getCurrentArchSpec = useCallback((): unknown => {
     return (window as any).__excaliDiagramCurrentArchSpec ?? null;
   }, []);
 
@@ -262,6 +269,7 @@ export function ExcalidrawHost() {
         onDrop={handleDrop}
       >
         <Excalidraw
+          initialData={initialData}
           excalidrawAPI={(api: any) => { apiRef.current = api; }}
           onChange={onChange}
         />
