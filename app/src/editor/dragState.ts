@@ -4,9 +4,11 @@
 
 import type { BuiltinAsset } from '../assets/assetCatalog'
 
-let _dragged: BuiltinAsset | null = null
+export type DragAsset = BuiltinAsset & { svgUrl?: string }
+
+let _dragged: DragAsset | null = null
 
 export const dragState = {
-  set: (asset: BuiltinAsset | null) => { _dragged = asset },
+  set: (asset: DragAsset | null) => { _dragged = asset },
   get: () => _dragged,
 }

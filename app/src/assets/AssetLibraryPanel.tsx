@@ -41,13 +41,6 @@ function toBuiltinAsset(si: ServerIcon): BuiltinAsset & { svgUrl?: string } {
   }
 }
 
-// Fetch SVG text from a URL (for canvas insertion)
-async function fetchSvgText(url: string): Promise<string> {
-  const r = await fetch(url)
-  if (!r.ok) throw new Error('Failed to fetch SVG')
-  return r.text()
-}
-
 export function AssetLibraryPanel({ onInsertAsset }: Props) {
   const [mode,       setMode]       = useState<Mode>('local')
   const [categories, setCategories] = useState<string[]>(['All'])

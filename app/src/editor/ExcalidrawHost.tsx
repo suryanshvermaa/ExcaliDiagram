@@ -58,6 +58,8 @@ type ExcalidrawApiLike = {
 
 type InsertableAsset = BuiltinAsset & { svgUrl?: string };
 
+const DRAG_TILE_PX = 96;
+
 declare global {
   interface Window {
     __excaliDiagramCurrentArchSpec?: unknown;
@@ -234,44 +236,6 @@ export function ExcalidrawHost() {
   };
 
   // ── Insert SVG onto canvas ────────────────────────────────────────────────
-  const insertSvgToCanvas = useCallback(
-    (svgString: string, x: number, y: number) => {
-      const api = apiRef.current as ExcalidrawApiLike | null;
-      if (!api) return;
-
-      const { width, height } = getSvgDims(svgString);
-      const centeredX = x - width  / 2;
-      const centeredY = y - height / 2;
-
-      const hiDpiSvg = makeHiDpiSvg(svgString, width, height);
-      const dataUrl = `data:image/svg+xml,${encodeURIComponent(hiDpiSvg)}`;
-      const fileId  = `svg-${Date.now()}`;
-
-      api.addFiles([{
-        id: fileId, dataURL: dataUrl, mimeType: "image/svg+xml",
-        created: Date.now(), lastRetrieved: Date.now(),
-      }]);
-
-      const skeleton = {
-        type: "image",
-        x: centeredX,
-        y: centeredY,
-        width,
-        height,
-        fileId,
-        status: "saved",
-      } as unknown as ConvertElement;
-
-      const el = convertToExcalidrawElements([skeleton] as unknown as ConvertInput);
-
-      api.updateScene(
-        { elements: [...api.getSceneElements(), ...el] },
-        { captureUpdate: CaptureUpdateAction.IMMEDIATELY }
-      );
-    },
-    []
-  );
-
   const insertSvgToCanvasAtSize = useCallback(
     (svgString: string, x: number, y: number, elementW: number, elementH: number) => {
       const api = apiRef.current as ExcalidrawApiLike | null;
@@ -313,18 +277,25 @@ export function ExcalidrawHost() {
   );
 
   const insertRemoteSvgUrlToCanvas = useCallback(
-    async (svgUrl: string, x: number, y: number, proxyId?: string) => {
+    async (
+      svgUrl: string,
+      x: number,
+      y: number,
+      opts?: { proxyId?: string; elementW?: number; elementH?: number }
+    ) => {
       // Keep server icons visually identical to sidebar by sourcing the exact SVG,
       // but still embed it as HiDPI data URL so zooming stays crisp.
-      const TILE = 96;
+      const elementW = opts?.elementW ?? DRAG_TILE_PX;
+      const elementH = opts?.elementH ?? DRAG_TILE_PX;
+      const proxyId = opts?.proxyId;
       try {
         const svg = await fetchSvgText(svgUrl);
-        insertSvgToCanvasAtSize(svg, x, y, TILE, TILE);
+        insertSvgToCanvasAtSize(svg, x, y, elementW, elementH);
       } catch {
         if (!proxyId) return;
         const res = await fetch(`${ICON_SERVER}/api/icons/${proxyId}/svg`);
         const svg = await res.text();
-        insertSvgToCanvasAtSize(svg, x, y, TILE, TILE);
+        insertSvgToCanvasAtSize(svg, x, y, elementW, elementH);
       }
     },
     [insertSvgToCanvasAtSize]
@@ -352,7 +323,7 @@ export function ExcalidrawHost() {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
     });
-  }, []);
+  }, [dragOverCanvas, dragPreview]);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     // Only clear when actually leaving the canvas wrapper (not moving between children).
@@ -380,29 +351,34 @@ export function ExcalidrawHost() {
       const { scrollX, scrollY, zoom } = appState;
       const sceneX = (e.clientX - rect.left) / zoom.value - scrollX;
       const sceneY = (e.clientY - rect.top)  / zoom.value - scrollY;
+      const tileScene = DRAG_TILE_PX / (zoom.value || 1);
 
       try {
         // If this is a server icon, prefer inserting via the same signed URL
         // used for the sidebar preview to avoid visual mismatches.
         if (dragged.svgUrl && !dragged.svg) {
-          await insertRemoteSvgUrlToCanvas(dragged.svgUrl, sceneX, sceneY, dragged.id);
+          await insertRemoteSvgUrlToCanvas(dragged.svgUrl, sceneX, sceneY, {
+            proxyId: dragged.id,
+            elementW: tileScene,
+            elementH: tileScene,
+          });
           return;
         }
 
         if (dragged.svg) {
-          insertSvgToCanvas(dragged.svg, sceneX, sceneY);
+          insertSvgToCanvasAtSize(dragged.svg, sceneX, sceneY, tileScene, tileScene);
           return;
         }
 
         // Fallback: fetch SVG text via proxy (when dragging object doesn't include svgUrl)
         const res = await fetch(`${ICON_SERVER}/api/icons/${dragged.id}/svg`);
         const svgStr = await res.text();
-        insertSvgToCanvas(svgStr, sceneX, sceneY);
+        insertSvgToCanvasAtSize(svgStr, sceneX, sceneY, tileScene, tileScene);
       } catch (err) {
         console.error("Drop insert failed:", err);
       }
     },
-    [insertRemoteSvgUrlToCanvas, insertSvgToCanvas]
+    [insertRemoteSvgUrlToCanvas, insertSvgToCanvasAtSize]
   );
 
   // ── Insert asset (raw SVG) ────────────────────────────────────────────────
@@ -413,14 +389,19 @@ export function ExcalidrawHost() {
       const appState = (api as ExcalidrawApiLike).getAppState();
       const x = -appState.scrollX + 100;
       const y = -appState.scrollY + 100;
+      const tileScene = DRAG_TILE_PX / (appState.zoom.value || 1);
 
       if (asset.svg) {
-        insertSvgToCanvas(asset.svg, x, y);
+        insertSvgToCanvasAtSize(asset.svg, x, y, tileScene, tileScene);
       } else if (asset.svgUrl) {
-        void insertRemoteSvgUrlToCanvas(asset.svgUrl, x, y, asset.id);
+        void insertRemoteSvgUrlToCanvas(asset.svgUrl, x, y, {
+          proxyId: asset.id,
+          elementW: tileScene,
+          elementH: tileScene,
+        });
       }
     },
-    [insertRemoteSvgUrlToCanvas, insertSvgToCanvas]
+    [insertRemoteSvgUrlToCanvas, insertSvgToCanvasAtSize]
   );
 
   // ── Insert SVG data URL (from code block) ─────────────────────────────────
