@@ -9,7 +9,7 @@ type Tab = 'assets' | 'code' | 'ai'
 interface Props {
   onInsertAsset:      (asset: BuiltinAsset) => void
   onInsertSvg:        (dataUrl: string, w: number, h: number) => void
-  onRenderArch:       (elements: any[], files: Record<string, any>) => void
+  onRenderArch:       (elements: any[], files: Record<string, any>, sessionId: string) => void
   getCurrentArchSpec: () => unknown
 }
 

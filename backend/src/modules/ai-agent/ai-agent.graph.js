@@ -81,7 +81,7 @@ async function validateNode(state) {
 
 function makeRefineNode(model) {
   return async (state) => {
-    const fixPrompt = `Your previous Mermaid output had issues:\n${state.errors.join('\n')}\n\nPrevious output:\n${state.rawResponse}\n\nFix ONLY these issues. Remember the strict rules:\n- Start with: flowchart TD  or  flowchart LR\n- Use ONLY rectangle nodes: A[Label]  (no circles, no diamonds, no stadiums)\n- Use ONLY solid arrows: A --> B  (no -.->, no ==>, no ---)\n- Use classDef + class for colors — NEVER use inline style statements\n- NO markdown fences, NO explanation\n\nOutput ONLY the corrected Mermaid code.`
+    const fixPrompt = `Your previous Mermaid output had issues:\n${state.errors.join('\n')}\n\nPrevious output:\n${state.rawResponse}\n\nFix ONLY these issues. Hard rules:\n- Start with: flowchart TD (for complex) or flowchart LR (for simple)\n- ONLY rectangle nodes: A[Label] — no circles, diamonds, cylinders, stadiums\n- ONLY solid arrows: A --> B — no -.->, no ==>, no --- \n- NEVER use subgraph...end blocks (they create Excalidraw frames)\n- Use classDef + class for colors — NEVER inline style statements\n- Arrows flow in ONE direction only — no back-arrows or cycles\n- Message brokers are HUBS: services --> Broker --> consumers (not individual topics)\n- NO markdown fences, NO explanation\n\nOutput ONLY the corrected Mermaid code.`
     try {
       const response = await model.invoke([
         new SystemMessage(GENERATE_SYSTEM_PROMPT),

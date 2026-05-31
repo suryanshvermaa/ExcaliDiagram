@@ -7,7 +7,7 @@ import { AISettingsModal } from './AISettingsModal'
 
 interface Props {
   /** Called when AI generates/modifies architecture — renders on Excalidraw canvas */
-  onRenderArch:       (elements: any[], files: Record<string, any>) => void
+  onRenderArch:       (elements: any[], files: Record<string, any>, sessionId: string) => void
   /** Returns current canvas context (for modify/explain). Now returns unknown — hook tracks Mermaid internally */
   getCurrentArchSpec: () => unknown
 }

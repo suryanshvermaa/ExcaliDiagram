@@ -123,7 +123,7 @@ function detectIntent(content: string, hasMermaid: boolean): Intent {
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 export function useAISession(
-  onRenderArch?: (elements: any[], files: Record<string, any>) => void,
+  onRenderArch?: (elements: any[], files: Record<string, any>, sessionId: string) => void,
   // getCurrentArchSpec is kept for backward-compat but we now track raw Mermaid
   _getCurrentArchSpec?: () => unknown,
 ) {
@@ -236,7 +236,7 @@ export function useAISession(
           isStreaming: false,
         }, sessId)
 
-        onRenderArch?.(elements as any, files)
+        onRenderArch?.(elements as any, files, activeId)
 
       } else if (intent === 'modify' && hasMermaid) {
         // ── Architecture modification (Mermaid-in, Mermaid-out) ───────────────
@@ -262,7 +262,7 @@ export function useAISession(
           isStreaming: false,
         }, sessId)
 
-        onRenderArch?.(elements as any, files)
+        onRenderArch?.(elements as any, files, activeId)
 
       } else if (intent === 'explain' || intent === 'improve') {
         // ── Explain / improve (text response, no diagram change) ──────────────
