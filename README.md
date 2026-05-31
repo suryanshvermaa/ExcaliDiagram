@@ -1,9 +1,6 @@
-# ExcelidrawApp — Offline Diagram Studio
+# ExcaliDiagram
 
-> A personal, offline-capable architecture diagramming studio built on Excalidraw.
-> Comes with a local Node.js icon server, a searchable system-design SVG library,
-> drag-and-drop canvas integration, Monaco-powered code block rendering, and a
-> database schema builder.
+Built on top of the Excalidraw canvas library, ExcaliDiagram is a full-stack diagramming app with a custom icon server, resizable sidebar, drag-and-drop asset library, code block modal, and database schema builder. The backend is a Node.js Express server that manages an S3-compatible object store (MinIO for development, AWS S3 for production) to serve SVG icons through a REST API. The frontend is a React app that integrates with Excalidraw to provide an infinite canvas workspace, a sidebar for browsing and inserting icons, and a Monaco Editor–powered modal for rendering syntax-highlighted code snippets as SVG cards on the canvas. LocalStorage autosave ensures your work persists across sessions.
 
 ---
 
