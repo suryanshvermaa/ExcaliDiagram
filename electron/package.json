@@ -5,10 +5,10 @@
   "main": "main.js",
   "private": true,
   "scripts": {
-    "start": "electron .",
+    "start": "electron . --no-sandbox",
+    "dev": "ELECTRON_DEV_TOOLS=1 electron . --no-sandbox",
     "build:renderer": "cd ../app && pnpm run build",
-    "build": "npm run build:renderer && electron-builder",
-    "dev": "NODE_ENV=development electron ."
+    "build": "npm run build:renderer && electron-builder"
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1"

@@ -21,13 +21,17 @@ const http   = require('http')
 const fs     = require('fs')
 
 // ── Resolve paths ─────────────────────────────────────────────────────────────
-const isDev       = process.env.NODE_ENV === 'development' || !app.isPackaged
-const BACKEND_DIR = isDev
-  ? path.join(__dirname, '..', 'backend')
-  : path.join(process.resourcesPath, 'backend')
-const RENDERER_DIR = isDev
-  ? null   // dev: load from Vite dev server or pre-built dist
-  : path.join(process.resourcesPath, 'renderer')
+// isPackaged = true when built with electron-builder; false when run from source
+const isPackaged  = app.isPackaged
+const BACKEND_DIR = isPackaged
+  ? path.join(process.resourcesPath, 'backend')
+  : path.join(__dirname, '..', 'backend')
+const RENDERER_DIR = isPackaged
+  ? path.join(process.resourcesPath, 'renderer')
+  : null
+
+// Only show DevTools when explicitly requested via env var
+const showDevTools = process.env.ELECTRON_DEV_TOOLS === '1'
 
 let backendPort = null
 let mainWindow  = null
@@ -121,12 +125,20 @@ async function createWindow() {
     },
   })
 
-  // Inject the backend port as a global so the React app can pick it up
-  // before any fetch() calls are made.
-  mainWindow.webContents.on('dom-ready', () => {
+  // Inject the backend port BEFORE scripts run — on every navigation/reload.
+  // This fires before the renderer's JS executes, so getApiBase() will see it.
+  mainWindow.webContents.on('did-start-loading', () => {
     mainWindow.webContents.executeJavaScript(
       `window.__ELECTRON_API_PORT__ = ${backendPort};`
-    )
+    ).catch(() => {})
+  })
+
+  // Also inject on dom-ready as a belt-and-suspenders fallback
+  mainWindow.webContents.on('dom-ready', () => {
+    mainWindow.webContents.executeJavaScript(
+      `window.__ELECTRON_API_PORT__ = ${backendPort}; ` +
+      `localStorage.setItem('excelidrawApp:apiPort', '${backendPort}');`
+    ).catch(() => {})
   })
 
   // Open external links in the system browser, not Electron
@@ -135,25 +147,35 @@ async function createWindow() {
     return { action: 'deny' }
   })
 
-  if (isDev) {
-    // In dev mode: try the Vite dev server first, fall back to pre-built dist
+  if (isPackaged) {
+    // Production: load bundled renderer
+    const indexPath = path.join(RENDERER_DIR, 'index.html')
+    await mainWindow.loadFile(indexPath)
+  } else {
+    // Development: try Vite dev server first, fall back to pre-built dist
     const devUrl = 'http://localhost:5173'
+    let loadedFromVite = false
     try {
       await new Promise((res, rej) => {
-        http.get(devUrl, r => { r.resume(); res() }).on('error', rej)
+        const req = http.get(devUrl, r => { r.resume(); res() })
+        req.on('error', rej)
+        req.setTimeout(800, () => { req.destroy(); rej(new Error('timeout')) })
       })
       console.log('🌐  Loading from Vite dev server:', devUrl)
       await mainWindow.loadURL(devUrl)
+      loadedFromVite = true
     } catch {
       // Vite not running — load pre-built dist
       const distIndex = path.join(__dirname, '..', 'app', 'dist', 'index.html')
       console.log('📦  Loading from pre-built dist:', distIndex)
       await mainWindow.loadFile(distIndex)
     }
+    void loadedFromVite  // suppress unused warning
+  }
+
+  // Open DevTools only when explicitly requested
+  if (showDevTools) {
     mainWindow.webContents.openDevTools({ mode: 'detach' })
-  } else {
-    const indexPath = path.join(RENDERER_DIR, 'index.html')
-    await mainWindow.loadFile(indexPath)
   }
 
   mainWindow.on('closed', () => { mainWindow = null })
