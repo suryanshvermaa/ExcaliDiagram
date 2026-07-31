@@ -3,6 +3,9 @@ const Icon = require('./icon.model')
 const s3   = require('./icon.service')
 const cfg  = require('../../config/env')
 
+const SIGNED_URL_EXPIRY = (cfg.storage && cfg.storage.signedUrlExpiry) || 315360000
+const BUCKET = (cfg.storage && cfg.storage.bucket) || 'icons'
+
 async function uploadIcon(req, res) {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
@@ -18,8 +21,12 @@ async function uploadIcon(req, res) {
     await s3.uploadSvg(key, req.file.buffer)
     const now       = Date.now()
     const svgUrl    = await s3.getPresignedUrl(key)
-    const svgExpiry = new Date(now + cfg.storage.signedUrlExpiry * 1000)
-    const icon = await Icon.create({ id, name, category, tags: tags.split(',').map(t => t.trim()).filter(Boolean), s3Key: key, s3Bucket: cfg.storage.bucket, svgUrl, svgUrlExpiry: svgExpiry })
+    const svgExpiry = new Date(now + SIGNED_URL_EXPIRY * 1000)
+    const icon = await Icon.create({
+      id, name, category,
+      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      s3Key: key, s3Bucket: BUCKET, svgUrl, svgUrlExpiry: svgExpiry,
+    })
     res.status(201).json({ ok: true, icon: { id: icon.id, name: icon.name, category: icon.category, tags: icon.tags, svgUrl: icon.svgUrl } })
   } catch (err) { console.error(err); res.status(500).json({ error: err.message || 'Upload failed' }) }
 }
@@ -33,10 +40,15 @@ async function uploadIconFromString(req, res) {
     await s3.uploadSvg(key, svg)
     const now       = Date.now()
     const svgUrl    = await s3.getPresignedUrl(key)
-    const svgExpiry = new Date(now + cfg.storage.signedUrlExpiry * 1000)
-    const icon = await Icon.create({ id, name, category, tags: Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim()).filter(Boolean), s3Key: key, s3Bucket: cfg.storage.bucket, svgUrl, svgUrlExpiry: svgExpiry })
+    const svgExpiry = new Date(now + SIGNED_URL_EXPIRY * 1000)
+    const icon = await Icon.create({
+      id, name, category,
+      tags: Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim()).filter(Boolean),
+      s3Key: key, s3Bucket: BUCKET, svgUrl, svgUrlExpiry: svgExpiry,
+    })
     res.status(201).json({ ok: true, icon })
   } catch (err) { console.error(err); res.status(500).json({ error: err.message || 'Upload failed' }) }
 }
 
 module.exports = { uploadIcon, uploadIconFromString }
+

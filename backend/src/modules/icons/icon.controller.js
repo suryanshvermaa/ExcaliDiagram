@@ -5,12 +5,16 @@ const cfg  = require('../../config/env')
 
 const PAGE_SIZE = 12
 
+// In desktop mode local URLs never expire — use a 10-year expiry so the
+// freshenUrl check never triggers unnecessarily.
+const SIGNED_URL_EXPIRY = (cfg.storage && cfg.storage.signedUrlExpiry) || 315360000 // 10 years
+
 async function freshenUrl(icon) {
   const now    = Date.now()
   const expiry = icon.svgUrlExpiry ? new Date(icon.svgUrlExpiry).getTime() : 0
   if (!icon.svgUrl || expiry - now < 5 * 60 * 1000) {
     icon.svgUrl       = await s3.getPresignedUrl(icon.s3Key)
-    icon.svgUrlExpiry = new Date(now + cfg.storage.signedUrlExpiry * 1000)
+    icon.svgUrlExpiry = new Date(now + SIGNED_URL_EXPIRY * 1000)
     await icon.save()
   }
   return icon
@@ -37,8 +41,9 @@ async function listIcons(req, res) {
       const expiry = icon.svgUrlExpiry ? new Date(icon.svgUrlExpiry).getTime() : 0
       if (!icon.svgUrl || expiry - now < 5 * 60 * 1000) {
         const freshUrl = await s3.getPresignedUrl(icon.s3Key)
-        const freshExp = new Date(now + cfg.storage.signedUrlExpiry * 1000)
-        Icon.updateOne({ _id: icon._id }, { svgUrl: freshUrl, svgUrlExpiry: freshExp }).exec()
+        const freshExp = new Date(now + SIGNED_URL_EXPIRY * 1000)
+        // updateOne returns a Promise — don't call .exec() (NeDB compat)
+        Icon.updateOne({ _id: icon._id }, { $set: { svgUrl: freshUrl, svgUrlExpiry: freshExp } })
         return { ...icon, svgUrl: freshUrl }
       }
       return icon

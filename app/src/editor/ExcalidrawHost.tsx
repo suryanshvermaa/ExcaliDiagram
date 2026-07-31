@@ -16,9 +16,9 @@ import {
   loadDevScene,
   scheduleSaveDevScene,
 } from "../storage/devSceneStorage";
+import { getApiBase } from "../lib/apiBase";
 
-
-const ICON_SERVER     = "http://localhost:3001";
+const ICON_SERVER     = getApiBase();
 const SIDEBAR_DEFAULT = 340;   // slightly wider to accommodate AI panel
 const SIDEBAR_MIN     = 280;
 const SIDEBAR_MAX     = 600;

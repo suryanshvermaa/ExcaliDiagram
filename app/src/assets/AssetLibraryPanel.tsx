@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { builtinAssets, type BuiltinAsset } from './assetCatalog'
 import { dragState } from '../editor/dragState'
+import { getApiBase } from '../lib/apiBase'
 
 export type { BuiltinAsset }
 
-const ICON_SERVER = 'http://localhost:3001'
+const ICON_SERVER = getApiBase()
 const PAGE_SIZE   = 12
 
 // Server icon shape returned by new API (svgUrl instead of inline svg)

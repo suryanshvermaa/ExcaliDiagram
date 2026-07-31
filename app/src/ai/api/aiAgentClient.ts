@@ -2,8 +2,9 @@
 // Handles all calls to /api/ai-agent/* and SSE streaming for chat.
 
 import type { ProviderID, AIMessage, AISettings } from '../types/ai.types'
+import { getApiBase } from '../../lib/apiBase'
 
-const AI_API = 'http://localhost:3001/api/ai-agent'
+const AI_API = `${getApiBase()}/api/ai-agent`
 
 function authHeaders(settings: AISettings): HeadersInit {
   const key = settings.apiKeys[settings.provider]
