@@ -10,6 +10,10 @@ const PAGE_SIZE = 12
 const SIGNED_URL_EXPIRY = (cfg.storage && cfg.storage.signedUrlExpiry) || 315360000 // 10 years
 
 async function freshenUrl(icon) {
+  if (process.env.DESKTOP_MODE === 'true') {
+    icon.svgUrl = await s3.getPresignedUrl(icon.s3Key)
+    return icon
+  }
   const now    = Date.now()
   const expiry = icon.svgUrlExpiry ? new Date(icon.svgUrlExpiry).getTime() : 0
   if (!icon.svgUrl || expiry - now < 5 * 60 * 1000) {
@@ -37,6 +41,10 @@ async function listIcons(req, res) {
       Icon.countDocuments(query),
     ])
     const refreshed = await Promise.all(icons.map(async icon => {
+      if (process.env.DESKTOP_MODE === 'true') {
+        // Port changes on every launch — don't cache in DB, just serve dynamically
+        return { ...icon, svgUrl: await s3.getPresignedUrl(icon.s3Key) }
+      }
       const now    = Date.now()
       const expiry = icon.svgUrlExpiry ? new Date(icon.svgUrlExpiry).getTime() : 0
       if (!icon.svgUrl || expiry - now < 5 * 60 * 1000) {
@@ -49,16 +57,22 @@ async function listIcons(req, res) {
       return icon
     }))
     res.json({ icons: refreshed.map(serialize), total, page: currentPage, pages: Math.max(1, Math.ceil(total / perPage)), perPage })
+
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed to list icons' }) }
 }
 
 async function getIcon(req, res) {
   try {
-    const icon = await Icon.findOne({ id: req.params.id })
-    if (!icon) return res.status(404).json({ error: 'Not found' })
-    await freshenUrl(icon)
-    res.json(serialize(icon.toObject()))
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed to get icon' }) }
+    const { id } = req.params
+    let icon = await Icon.findOne({ id })
+    if (!icon) return res.status(404).json({ error: 'Icon not found' })
+    if (process.env.DESKTOP_MODE === 'true') {
+      icon = { ...icon.toObject ? icon.toObject() : icon, svgUrl: await s3.getPresignedUrl(icon.s3Key) }
+    } else {
+      icon = await freshenUrl(icon)
+    }
+    res.json(serialize(icon))
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed to fetch icon' }) }
 }
 
 async function getIconSvg(req, res) {
