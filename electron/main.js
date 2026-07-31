@@ -109,6 +109,9 @@ async function startBackend() {
 
 // ── Create the BrowserWindow ──────────────────────────────────────────────────
 async function createWindow() {
+  // Pass the backend port via additionalArguments so the PRELOAD script can read
+  // it from process.argv SYNCHRONOUSLY — before any React module code runs.
+  // This is the only reliable way to inject a value before getApiBase() is called.
   mainWindow = new BrowserWindow({
     width:  1400,
     height: 900,
@@ -117,28 +120,13 @@ async function createWindow() {
     title: 'ExcaliDiagram',
     backgroundColor: '#1e1e2e',
     webPreferences: {
-      preload:         path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration:  false,
-      // Allow loading local SVG files served by the backend
-      webSecurity: true,
+      preload:             path.join(__dirname, 'preload.js'),
+      contextIsolation:    true,
+      nodeIntegration:     false,
+      webSecurity:         true,
+      // ← port is readable in preload via process.argv before page scripts run
+      additionalArguments: [`--api-port=${backendPort}`],
     },
-  })
-
-  // Inject the backend port BEFORE scripts run — on every navigation/reload.
-  // This fires before the renderer's JS executes, so getApiBase() will see it.
-  mainWindow.webContents.on('did-start-loading', () => {
-    mainWindow.webContents.executeJavaScript(
-      `window.__ELECTRON_API_PORT__ = ${backendPort};`
-    ).catch(() => {})
-  })
-
-  // Also inject on dom-ready as a belt-and-suspenders fallback
-  mainWindow.webContents.on('dom-ready', () => {
-    mainWindow.webContents.executeJavaScript(
-      `window.__ELECTRON_API_PORT__ = ${backendPort}; ` +
-      `localStorage.setItem('excelidrawApp:apiPort', '${backendPort}');`
-    ).catch(() => {})
   })
 
   // Open external links in the system browser, not Electron
@@ -152,9 +140,9 @@ async function createWindow() {
     const indexPath = path.join(RENDERER_DIR, 'index.html')
     await mainWindow.loadFile(indexPath)
   } else {
-    // Development: try Vite dev server first, fall back to pre-built dist
+    // Not packaged: try Vite dev server first, fall back to pre-built dist
     const devUrl = 'http://localhost:5173'
-    let loadedFromVite = false
+    let usedVite = false
     try {
       await new Promise((res, rej) => {
         const req = http.get(devUrl, r => { r.resume(); res() })
@@ -163,17 +151,17 @@ async function createWindow() {
       })
       console.log('🌐  Loading from Vite dev server:', devUrl)
       await mainWindow.loadURL(devUrl)
-      loadedFromVite = true
+      usedVite = true
     } catch {
       // Vite not running — load pre-built dist
       const distIndex = path.join(__dirname, '..', 'app', 'dist', 'index.html')
       console.log('📦  Loading from pre-built dist:', distIndex)
       await mainWindow.loadFile(distIndex)
     }
-    void loadedFromVite  // suppress unused warning
+    void usedVite
   }
 
-  // Open DevTools only when explicitly requested
+  // Open DevTools only when explicitly requested via ELECTRON_DEV_TOOLS=1
   if (showDevTools) {
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   }
